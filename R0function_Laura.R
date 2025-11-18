@@ -129,4 +129,72 @@ plot_R0_combined <- R0_plot / rseffect_r0_params_plot + plot_layout(heights = c(
 
 
 
+#### Rate summation on R0_constant
+
+### assuming dtr9
+
+R0_const_dtr9 <- RSCalcTempGrad(R0_constant, LPtemps_dtr9, Temp.gradient)
+
+### assuming dtr12
+
+R0_const_dtr12 <- RSCalcTempGrad(R0_constant, LPtemps_dtr12, Temp.gradient)
+
+
+#######Calculate quantiles for plotting
+
+R0_constant_summary <- calcPostQuants(R0_constant, "R0_const", Temp.gradient)
+
+R0_const_dtr9_summary <- calcPostQuants(R0_const_dtr9, "R0_const_dtr09", Temp.gradient)
+
+R0_const_dtr12_summary <- calcPostQuants(R0_const_dtr12, "R0_const_dtr12", Temp.gradient)
+
+# Calculate maximum predicted R0 value for each model
+
+max(R0_constant_summary$median)
+max(R0_const_dtr9_summary$median)
+max(R0_const_dtr12_summary$median)
+
+
+# Calculate the max value of the median R0 from the constant temperature model
+R0_scale <- max(R0_constant_summary$median)
+
+# Get summary statistics of Tmin, Tmax, Topt, and Tbreadth 
+params_R0_const <- extractDerivedTPC(R0_constant, "R0_const", Temp.gradient)
+
+params_r0_const_dtr9 <- extractDerivedTPC(R0_const_dtr9, "r0_const_dtr9", Temp.gradient)
+params_r0_const_dtr12 <- extractDerivedTPC(R0_const_dtr12, "r0_const_dtr12", Temp.gradient)
+
+# #### Comparison: combine rate summation and constant
+rseffect_r0_predictions_model2 <- bind_rows(R0_constant_summary, R0_const_dtr9_summary, R0_const_dtr12_summary)
+rseffect_r0_params_model2 <- bind_rows(params_R0_const, params_r0_const_dtr9, params_r0_const_dtr12) %>% 
+	dplyr::filter(term %in% c("Topt", "cf.Tm", "cf.T0")) %>% 
+	mutate(term = case_when(term == "cf.Tm" ~ "Tmax",
+							term == "cf.T0"~ "Tmin",
+							term == "Topt" ~ "Topt"))
+
+
+#### Comparison: combine all treatments constant and rate summation
+
+R0_plot_2 <- rseffect_r0_predictions_model2 %>% 
+	ggplot() +
+	geom_ribbon(aes(x = temperature, ymin = lowerCI, ymax = upperCI, fill = treatment)) +
+	geom_line(aes(x = temperature, y = mean, color = treatment, linetype = treatment), size = 0.6) +
+	scale_color_manual(values = c(c_constant, c_rssuit09, c_rssuit12), labels = c("1: Constant", "2: Rate summation on R0 - DTR 9", "2: Rate summation on R0 - DTR 12")) +
+	scale_fill_manual(values = c(ct_constant, ct_rssuit09, ct_rssuit12), labels = c("1: Constant", "2: Rate summation on R0 - DTR 9", "2: Rate summation on R0 - DTR 12")) +
+	scale_linetype_manual(values = c(1, 1, 1), labels = c("1: Constant", "2: Rate summation on R0 - DTR 9", "2: Rate summation on R0 - DTR 12")) +
+	ylab("Suitability for transmission (R0)") + xlab("Temperature (°C)") + xlim(5, 43) +
+	theme_classic() +
+	theme(legend.position = c(0.2, 0.75), legend.title=element_blank(), axis.title.x = element_blank(),
+		  axis.ticks.y = element_blank(), axis.text.y = element_blank())
+
+rseffect_r0_params_plot_2 <- ggplot() +
+	geom_pointrange(aes(x = term, y = mean, ymin = lowerCI, ymax = upperCI, color = treatment), data = rseffect_r0_params, position=position_dodge(width=1)) +
+	coord_flip() + ylab("Temperature (°C)") + ylim(5, 43) +
+	scale_color_manual(values = c(c_constant, c_rssuit09, c_rssuit12)) +
+	theme_classic() +
+	theme(legend.position = "none", axis.title.y = element_blank())
+
+plot_R0_combined <- R0_plot_2 / rseffect_r0_params_plot_2 + plot_layout(heights = c(3, 0.75))
+
+
 save.image()
