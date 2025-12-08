@@ -11,36 +11,36 @@ library('progress')
 library("tidyverse")
 
 
-##### Load functions from Shocket et al. 202
+##### Load functions from Shocket et al. 2025
 source("R-scripts/working-versions-code/00_RSProjectFunctions.R")
 
-##### Load TPC fittings data from constant temperatures calculated by Mordecai 2019, and transform t() data
+##### Load TPC fittings data from constant temperatures calculated by Mordecai 2019, and transpose t() data
 #bite rate (a)
-dengue.bite.rate.a <- read.csv("data-mordecai/AeaeDENV.a.csv", header = F)
+dengue.bite.rate.a <- read.csv("Trait Trajectories/AeaeDENV.a.csv", header = F)
 dengue.bite.rate.a.trans <- t(dengue.bite.rate.a)
 
 #fecundity (EFD)
-denv.fecundity.efd <- read.csv("data-mordecai/AeaeDENV.EFD.csv", header = F)
+denv.fecundity.efd <- read.csv("Trait Trajectories/AeaeDENV.EFD.csv", header = F)
 denv.fecundity.efd.t <- t(denv.fecundity.efd)
 
 #egg to adult development rate (MDR)
-denv.dev.mdr <- read.csv("data-mordecai/AeaeDENV.MDR.csv", header = F)
+denv.dev.mdr <- read.csv("Trait Trajectories/AeaeDENV.MDR.csv", header = F)
 denv.dev.mdr.t <- t(denv.dev.mdr)
 
 #survival probability (pEA)
-denv.surv.pea <- read.csv("data-mordecai/AeaeDENV.pEA.csv", header = F)
+denv.surv.pea <- read.csv("Trait Trajectories/AeaeDENV.pEA.csv", header = F)
 denv.surv.pea.t <- t(denv.surv.pea)
 
 #average mosquito lifespan (lf)
-zikv.lf <- read.csv("data-mordecai/AeaeZIKV.lf.csv", header = F)
+zikv.lf <- read.csv("Trait Trajectories/AeaeZIKV.lf.csv", header = F)
 zikv.lf.t <- t(zikv.lf)
 
 #extrinsic incubation rate (PDR - Parasite development rate)
-zikv.eir.pdr <- read.csv("data-mordecai/AeaeZIKV.PDR.csv", header = F)
+zikv.eir.pdr <- read.csv("Trait Trajectories/AeaeZIKV.PDR.csv", header = F)
 zikv.eir.pdr.t <- t(zikv.eir.pdr)
 
 #vector competence (b) (proportion of infected that successfully transmit)
-zikv.vc.bc <- read.csv("data-mordecai/AeaeZIKV.b.csv", header = F)
+zikv.vc.bc <- read.csv("Trait Trajectories/AeaeZIKV.b.csv", header = F)
 zikv.vc.bc.t <- t(zikv.vc.bc)
 
 #### Perform rate summation calculation on the TPC
@@ -399,7 +399,7 @@ vc_zika_plot
 
 #constant
 
-ec<-1/24
+ec<-1/24 #minimum survival 
 
 myR0<-function(a, b, PDR, MDR, EFD, e2a, lf){
 mu = 1/(lf + ec)
@@ -441,11 +441,48 @@ max(R0_RS12_summary$median)
 1 - max(R0_RS12_summary$median)/max(R0_constant_summary$median) # 54%
 
 
+# Calculate the max value of the median R0 from the constant temperature model
+R0_scale <- max(R0_constant_summary$median)
+
+# Get summary statistics of Tmin, Tmax, Topt, and Tbreadth 
+params_R0_const <- extractDerivedTPC(R0_constant, "R0_const", Temp.gradient)
+
+params_r0_rs09 <- extractDerivedTPC(R0_RS09, "r0_rs09", Temp.gradient)
+params_r0_rs12 <- extractDerivedTPC(R0_RS12, "r0_rs12", Temp.gradient)
+
+# #### Comparison: combine rate summation and constant
+rseffect_r0_predictions <- bind_rows(R0_constant_summary, R0_RS09_summary, R0_RS12_summary)
+rseffect_r0_params <- bind_rows(params_R0_const, params_r0_rs09, params_r0_rs12) %>% 
+	dplyr::filter(term %in% c("Topt", "cf.Tm", "cf.T0")) %>% 
+	mutate(term = case_when(term == "cf.Tm" ~ "Tmax",
+							term == "cf.T0"~ "Tmin",
+							term == "Topt" ~ "Topt"))
+
+
+
+#### Comparison: combine all treatments constant and rate summation
+
+R0_plot <- rseffect_r0_predictions %>% 
+	ggplot() +
+	geom_ribbon(aes(x = temperature, ymin = lowerCI, ymax = upperCI, fill = treatment)) +
+	geom_line(aes(x = temperature, y = mean, color = treatment, linetype = treatment), size = 0.6) +
+	scale_color_manual(values = c(c_constant, c_rssuit09, c_rssuit12), labels = c("1: Constant", "2: Rate summation DTR 9", "2: Rate summation DTR 12")) +
+	scale_fill_manual(values = c(ct_constant, ct_rssuit09, ct_rssuit12), labels = c("1: Constant", "2: Rate summation DTR 9", "2: Rate summation DTR 12")) +
+	scale_linetype_manual(values = c(1, 1, 1), labels = c("1: Constant", "2: Rate summation DTR 9", "2: Rate summation DTR 12")) +
+	ylab("Suitability for transmission (R0)") + xlab("Temperature (°C)") + xlim(5, 43) +
+	theme_classic() +
+	theme(legend.position = c(0.2, 0.75), legend.title=element_blank(), axis.title.x = element_blank(),
+		  axis.ticks.y = element_blank(), axis.text.y = element_blank())
+
+rseffect_r0_params_plot <- ggplot() +
+	geom_pointrange(aes(x = term, y = mean, ymin = lowerCI, ymax = upperCI, color = treatment), data = rseffect_r0_params, position=position_dodge(width=1)) +
+	coord_flip() + ylab("Temperature (°C)") + ylim(5, 43) +
+	scale_color_manual(values = c(c_constant, c_rssuit09, c_rssuit12)) +
+	theme_classic() +
+	theme(legend.position = "none", axis.title.y = element_blank())
+
+plot_R0_combined <- R0_plot / rseffect_r0_params_plot + plot_layout(heights = c(3, 0.75))
+
 
 
 save.image()
-
-
-
-
-
