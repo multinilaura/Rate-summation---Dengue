@@ -5,7 +5,9 @@ This repository constains a preliminary analysis applying rate summation to Zika
 The analyses are based on functions published in "Mean daily temperatures predict the thermal limits of malaria transmission better than hourly rate summation" https://doi.org/10.1038/s41467-025-58612-w
 
 The original code and data sources are available at:
+
 	- Rate summation functions: https://github.com/mshocket/anopheles-rate-summation-release.
+	
 	- Thermal performance curves: https://github.com/mshocket/Thermal-Eco-MBD.
 
 
