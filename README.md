@@ -17,7 +17,7 @@ Instruction for Use
 
 Follow the steps below to reproduce the analysis:
 
-	- Access https://github.com/mshocket/anopheles-rate-summation-release, open the 'R-scipts folder', and download 'working-versions-code' folder. This folder constains all R functions to run the scripts present in this repository.
+	- Access https://github.com/mshocket/anopheles-rate-summation-release and download the 'R-scipts folder'. This folder constains all R functions to run the scripts present in this repository.
 	- Access https://github.com/mshocket/Thermal-Eco-MBD and download 'Trait Trajectories' folder, this folder contains the Meta Data for thermal performance curves fit for Mosquito-Borne Diseases Project. In this folder we will
 	use trait data for AeaeDENV and AeaeZIKV.
 	- Follow instructions for installing R and JAGS provided at the software links provided above.
